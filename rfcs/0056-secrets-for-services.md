@@ -71,17 +71,18 @@ Design goals:
 
 Core concepts and terminology:
 
-* *Secrets store*: a secure file-system based location, in this document `/etc/secrets`,
-  only accessible to root
-* A *fetcher* function: a function whose task it is
-  to resolve the secret identifier, retrieve the secret and place it in the
-  service process' private namespace within /tmp name
-* Simple helper functions to *enrich* expressions defining systemd services with
-  secrets
-* "Side-cart" service: A privileged systemd service running the fetcher function
-  to retrieve the fetcher function, and initially create the service namespace.
-* Secrets scope / secrets store (TODO: naming): provides a context in swhich secrets
-  are accessible as attributes resolving to path names within the private namespace
+* *Secrets store*: a secure file-system based location, in this document
+  `/etc/secrets`, only accessible to root
+* A *fetcher* function: a function whose task it is to resolve the secret
+  identifier, retrieve the secret and place it in the service process' private
+  namespace within /tmp name
+* Simple helper functions to *enrich* expressions defining systemd services
+  with secrets
+* "Side-cart" service: A privileged systemd service running the fetcher
+  function to retrieve the fetcher function, and initially create the service
+  namespace.
+* Secrets scope: provides a context in swhich secrets are accessible as
+  attributes resolving to path names within the private namespace
 
 The general idea is centered around this simple process:
 
@@ -151,13 +152,17 @@ but can add a little bit of developer convenience.
 
 For this the target service is forced/asserted to utilize `PrivateTmp=true`.
 
+## Rotating secrets
 
-TODO: Explain how this impacts different scenarios, such as secret rotation
+Right now, secrets rotation is not done automatically. When new secrets are
+pushed, it is the responsibility of the user to restart the services affected.
 
-TODO: Maybe there is a nicer way to depend on secrets in the service defs than by "path"
+It is assumed that once secrets are rotated, old secrets will become invalid and
+no further harm is done aside from failing to access the resources (and possibly
+restart on its own).
 
-TODO: Guards to ensure that the fetcher has already copied the secrets before the
-downstream services are started. How?
+It would be possible to allow for automatic restarts using systemd path monitors.
+Also see _Future work_.
 
 # Drawbacks
 [drawbacks]: #drawbacks
