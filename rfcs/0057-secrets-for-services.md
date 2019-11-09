@@ -258,9 +258,7 @@ nixos service modules.
   files loaded into the private tmp. But this would be also the case in other scenarios.
   Is it sufficient to just emit a warning? Should there be a "i know what I'm doing" flag?
 
-* One sidecart per secret? join multiple namespaces? Or one sidecart per scope?
-  I think one side-car per secret could cause problems with shared tmp's
-  between different services and thus be less isolated.
+* Would it be better to create a side-cart per secret instead of per secret-scope+service?
 
 # Future work
 [future]: #future-work
