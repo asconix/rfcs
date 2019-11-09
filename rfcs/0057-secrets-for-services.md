@@ -44,10 +44,9 @@ concern without needing change to the approach proposed here. Further, its outsi
 of scope to ensure other properties of the secret store, such as encryption at rest
 and so forth.
 
-The main idea here is to allow for flexibility in the way secrets are actually
-delivered to the system while providing a consistent and unintrusive mechanism
-that could be applied widely across the service modules that does not require
-large big-bang code-changes and allows for a gradual transition of nixos services.
+The main idea here is to allow for flexibility in the way secrets are
+delivered to the system while providing a simple mechanism that can allow
+be easy to integrate with and allow for a gradual adoption.
 
 # Detailed design
 [design]: #detailed-design
@@ -77,7 +76,7 @@ Core concepts and terminology:
   namespace within /tmp name
 * Simple helper functions to *enrich* expressions defining systemd services
   with secrets
-* "Side-cart" service: A privileged systemd service running the fetcher
+* "side-car" service: A privileged systemd service running the fetcher
   function to retrieve the fetcher function, and initially create the service
   namespace.
 * Secrets scope: provides a context in swhich secrets are accessible as
@@ -85,14 +84,14 @@ Core concepts and terminology:
 
 The general idea is centered around this simple process:
 
-A privileged side-cart service is launched first, creates a namespace, executes
+A privileged side-car service is launched first, creates a namespace, executes
 the fetcher function which retrieves the secrets and copies them into the private
-tmpfs. The side-cart service binds to the target service to ensure it's shut
+tmpfs. The side-car service binds to the target service to ensure it's shut
 down and the namespace is destroyed when the target service disappears. This
 service uses `RemainAfterExit` to keep the namespace open for other services
 without relying on arbitrary timing.
 
-The target service launches once the side-cart service has been launched,
+The target service launches once the side-car service has been launched,
 joins it's namespace and is able to access the secrets provided in the shared
 tmpfs in `/tmp`.
 The service is not free to access the file in whichever way it wants -
@@ -143,7 +142,7 @@ knowledge, but is less convenient and would not result in build time errors
 when wrong paths are specified - thus the arguments add a little bit of
 convenience and safety, aside from the indirection they offer.
 
-For every service defined this way in a scope, a side-cart container is generated
+For every service defined this way in a scope, a side-car container is generated
 _per service_ and wired up with the target service. This means that the ability
 to create a scope does not break isolation between multiple target services
 but can add a little bit of developer convenience.
@@ -154,13 +153,13 @@ A working POC example can be found in https://github.com/d-goldin/nix-svc-secret
 
 For the above simple case, the generated service definitions looks like the following:
 
-Side-cart service:
+side-car service:
 
 ```
 [Unit]
 Before=foo.service
 BindsTo=foo.service
-Description=side-cart for foo
+Description=side-car for foo
 
 [Service]
 Environment="[...]"
@@ -196,7 +195,7 @@ is shown in https://github.com/d-goldin/nix-svc-secrets/blob/master/secretslib.n
 
 This is mostly functionality containing a _registry_ of existing fetchers, which
 might need to be configured by the user via their system configuration, the
-fetcher logic itself and functionality to generate side-cart services and
+fetcher logic itself and functionality to generate side-car services and
 expose the secrets scope.
 
 ## Rotating secrets
@@ -260,7 +259,7 @@ nixos service modules.
   Is it sufficient to just emit a warning? Should there be a "i know what I'm doing" flag?
 
 * One sidecart per secret? join multiple namespaces? Or one sidecart per scope?
-  I think one side-cart per secret could cause problems with shared tmp's
+  I think one side-car per secret could cause problems with shared tmp's
   between different services and thus be less isolated.
 
 # Future work
