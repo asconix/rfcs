@@ -12,7 +12,7 @@ related-issues: (will contain links to implementation PRs)
 # Summary
 [summary]: #summary
 
-This RFC introduces an interface, terminology and library functions to help managing
+This RFC introduces some interfaces, terminology and library functions to help managing
 secrets for NixOS systemd services modules.
 
 # Motivation
@@ -32,7 +32,7 @@ features throughout the nixpkgs modules.
 The approach outlined in this document aims to solve only a part of the secrets
 management problem, namely: How to make secrets that are already accessible on the
 system (be it through a secrets folder only readable by root, or a system like
-vault) to non-interactive services in a safe way.
+vault or nixops) to non-interactive services in a safe way.
 
 It assumes that shipping secrets is already solved sufficiently by krops, nixops,
 git-crypt, simple rsync etc, and if not, that this can be addressed as a separate
@@ -47,11 +47,6 @@ large big-bang code-changes and allows for a gradual transition of nixos service
 
 # Detailed design
 [design]: #detailed-design
-
-This is the bulk of the RFC. Explain the design in enough detail for somebody
-familiar with the ecosystem to understand, and implement.  This should get
-into specifics and corner-cases, and include examples of how the feature is
-used.
 
 To summarize, necessary preconditions:
 
@@ -139,7 +134,6 @@ some private location within the namespace - in our case `secret1 ->
 The resolution and location is decided by the inner workings of
 the implementation and should be rather unimportant to the user, as it could
 potentially change, if other private locations besides `/tmp` become available.
-
 It is of course still possible to just point to the file locations given the
 knowledge, but is less convenient and would not result in build time errors
 when wrong paths are specified - thus the arguments add a little bit of
@@ -151,6 +145,21 @@ to create a scope does not break isolation between multiple target services
 but can add a little bit of developer convenience.
 
 For this the target service is forced/asserted to utilize `PrivateTmp=true`.
+
+A working POC example can be found in https://github.com/d-goldin/nix-svc-secrets/blob/master/secrets-test.nix.
+
+## NixOS modules integration
+
+To implement an interface as outlined above, a little bit of supporting functionality
+needs to be added somewhere in the nixos library functionality.
+
+An example of some needed functions, of which some could be user exposed configuration,
+is shown in https://github.com/d-goldin/nix-svc-secrets/blob/master/secretslib.nix.
+
+This is mostly functionality containing a _registry_ of existing fetchers, which
+might need to be configured by the user via their system configuration, the
+fetcher logic itself and functionality to generate side-cart services and
+expose the secrets scope.
 
 ## Rotating secrets
 
@@ -167,17 +176,14 @@ Also see _Future work_.
 # Drawbacks
 [drawbacks]: #drawbacks
 
-Why should we *not* do this?
-
 I can't really think of a serious drawback right now, but hopefully the
 RFC process can surface some.
 
-One aspect is of course the additional number of services generated.
+One aspect is of course the additional number of services generated, but this
+does not seem to be a bit issue when using NixOps.
 
 # Alternatives
 [alternatives]: #alternatives
-
-What other designs have been considered? What is the impact of not doing this?
 
 * One approach that has been proposed in the past is a non-world readable store,
   in issue #8 (support private files in the nix store, from 2012). While this would
@@ -187,17 +193,24 @@ What other designs have been considered? What is the impact of not doing this?
   utilizing string-paths to reference them. This does not work well anymore with
   DynamicUser.
 
+* A somewhat similar approach exists in
+  https://cgit.krebsco.de/stockholm/tree/krebs/3modules/secret.nix
+  (loosely related to krops).
+
+* NixOps implements a similar approach, providing a service to expose secrets
+  via a systemd service after it has taken care of deployment.
+
 Impact of not doing this:
 
-Continued proliferation of individual per-module solutions per default.
+Continued proliferation of various, individual solutions, per module and
+depending on the users environment.
+
 Persistent confusion by new-comers and veterans alike, about what the a
 recommended way looks like and a variety of different approaches within
 nixos service modules.
 
 # Unresolved questions
 [unresolved]: #unresolved-questions
-
-What parts of the design are still TBD or unknowns?
 
 * Is it sufficient to put responsibility on restarting services after key changes
   onto the user or would an automated mechanism be better? There are also down-sides
@@ -215,14 +228,11 @@ What parts of the design are still TBD or unknowns?
 # Future work
 [future]: #future-work
 
-What future work, if any, would be implied or impacted by this feature
-without being directly part of the work?
-
 * When using a scope with multiple services, ideally only the secrets
   references in the services definition should be made available to each
   service. Right now all the secrets of the scope are blindly copied.
 * Transition of most critical services to use proposed approach
-* Implementation of more supported secret stores, such as vault
+* Implementation of more supported secret stores, such as nixops and vault
 * Optional restarting for services affected by rolled secrets
 * Merging some attributes better than in the POC - like JoinsNamespaceOf
 * Provide simple shell functions for features like loading a file into an environment
