@@ -15,6 +15,10 @@ related-issues: (will contain links to implementation PRs)
 This RFC introduces some interfaces, terminology and library functions to help managing
 secrets for NixOS systemd services modules.
 
+The general idea is to provide some basic infrastructure within nixos modules to
+handle secrets more consistently while being able to integrate pre-existing solutions
+like NixOps, or a simple secrets folder.
+
 # Motivation
 [motivation]: #motivation
 
@@ -147,6 +151,40 @@ but can add a little bit of developer convenience.
 For this the target service is forced/asserted to utilize `PrivateTmp=true`.
 
 A working POC example can be found in https://github.com/d-goldin/nix-svc-secrets/blob/master/secrets-test.nix.
+
+For the above simple case, the generated service definitions looks like the following:
+
+Side-cart service:
+
+```
+[Unit]
+Before=foo.service
+BindsTo=foo.service
+Description=side-cart for foo
+
+[Service]
+Environment="[...]"
+
+ExecStart=/nix/store/v1bm9bnmbxbq9740yj0a64b3vz3y7ryz-secrets-copier secret1 secret2
+PrivateTmp=true
+RemainAfterExit=true
+Type=oneshot
+```
+
+Target service:
+
+```
+[Unit]
+Description=Simple test service using a secret
+JoinsNamespaceOf=foo-secrets.service
+
+[Service]
+Environment="PATH=[...]"
+
+DynamicUser=true
+ExecStart=/nix/store/3kqc2wmvf1jkqb2jmcm7rvd9lf4345ra-coreutils-8.31/bin/cat /tmp/secret1
+PrivateTmp=true
+```
 
 ## NixOS modules integration
 
