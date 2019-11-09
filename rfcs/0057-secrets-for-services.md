@@ -178,7 +178,7 @@ Description=Simple test service using a secret
 JoinsNamespaceOf=foo-secrets.service
 
 [Service]
-Environment="PATH=[...]"
+Environment="[...]"
 
 DynamicUser=true
 ExecStart=/nix/store/3kqc2wmvf1jkqb2jmcm7rvd9lf4345ra-coreutils-8.31/bin/cat /tmp/secret1
