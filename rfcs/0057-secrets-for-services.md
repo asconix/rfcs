@@ -252,12 +252,10 @@ nixos service modules.
 * Is it sufficient to put responsibility on restarting services after key changes
   onto the user or would an automated mechanism be better? There are also down-sides
   to an automated mechanism too.
-
 * Right now the POC does not support joining other namespaces if needed. Also, this has
   some security implications, as the other process would be able to read the secrets
   files loaded into the private tmp. But this would be also the case in other scenarios.
   Is it sufficient to just emit a warning? Should there be a "i know what I'm doing" flag?
-
 * Would it be better to create a side-cart per secret instead of per secret-scope+service?
 
 # Future work
