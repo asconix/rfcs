@@ -94,8 +94,8 @@ without relying on arbitrary timing.
 The target service launches once the side-car service has been launched,
 joins it's namespace and is able to access the secrets provided in the shared
 tmpfs in `/tmp`.
-The service is not free to access the file in whichever way it wants -
-for instance just passing the path to the software to be launches as
+The service is now free to access the file in whichever way it wants -
+for instance just passing the path to the software to be launched as
 an argument, or load it up into an environment variable.
 
 Example of user-facing API:
