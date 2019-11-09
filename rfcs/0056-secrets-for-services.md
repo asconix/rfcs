@@ -21,7 +21,7 @@ secrets for NixOS systemd services modules.
 There is currently a lack of a consistent and safe mechanism to make secrets
 available to systemd services in NixOS. Various modules implement it in various
 ways across the ecosystem. There have also been ideas like adjustments to the
-Nix Store (like issue https://github.com/NixOS/nixpkgs/issues/24288), which
+Nix Store (like issue https://github.com/NixOS/nixpkgs/issues/8), which
 would allow for non-world-readable files, but has made no progress in several years.
 
 Especially with the introduction of Systemd's `DynamicUser` more traditional
