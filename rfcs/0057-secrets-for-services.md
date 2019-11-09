@@ -22,31 +22,33 @@ like NixOps, or a simple secrets folder.
 # Motivation
 [motivation]: #motivation
 
-There is currently a lack of a consistent and safe mechanism to make secrets
+There is currently a lack of consistent and safe mechanisms to make secrets
 available to systemd services in NixOS. Various modules implement it in various
 ways across the ecosystem. There have also been ideas like adjustments to the
 Nix Store (like issue https://github.com/NixOS/nixpkgs/issues/8), which
-would allow for non-world-readable files, but has made no progress in several years.
+would allow for non-world-readable files, but this issue has made no progress
+in several years.
 
-Especially with the introduction of Systemd's `DynamicUser` more traditional
+With the introduction of Systemd's `DynamicUser`, the more traditional
 approaches of manually managing permissions of some out-of-store files could
-become cumbersome or slow the adoption of DynamicUser and other sandboxing
+become cumbersome or slow down the adoption of DynamicUser and other sandboxing
 features throughout the nixpkgs modules.
 
 The approach outlined in this document aims to solve only a part of the secrets
 management problem, namely: How to make secrets that are already accessible on the
 system (be it through a secrets folder only readable by root, or a system like
-vault or nixops) to non-interactive services in a safe way.
+vault or nixops) available to non-interactive services in a safe way.
 
 It assumes that shipping secrets is already solved sufficiently by krops, nixops,
 git-crypt, simple rsync etc, and if not, that this can be addressed as a separate
-concern without needing change to the approach proposed here. Further, its outside
-of scope to ensure other properties of the secret store, such as encryption at rest
-and so forth.
+concern without needing to change the approach proposed here. Further, it is outside
+of the scope of this proposal to ensure other properties of the secret store, such as
+encryption at rest.
 
-The main idea here is to allow for flexibility in the way secrets are
-delivered to the system while providing a simple mechanism that can allow
-be easy to integrate with and allow for a gradual adoption.
+The main idea here is to allow for flexibility in the way secrets are delivered to the
+system, while at the same time providing a consistent and unobtrusive mechanism that can
+be applied widely across service modules without requiring large code-changes while allowing
+for a gradual transition of nixos services.
 
 # Detailed design
 [design]: #detailed-design
@@ -63,9 +65,9 @@ To summarize, necessary preconditions:
 
 Design goals:
 * A set of secrets are made available to a set of services only for the duration of their execution
-* Retrieved secrets are only accessible to the service processe and root
-* Retrieved secrets are reliably cleaned up when services are stopped, killed,
-  crash or the system is restarted.
+* Retrieved secrets are only accessible to the service processes and root
+* Retrieved secrets are reliably cleaned up when the services stop, crash,
+  receive sigkill or the system is restarted
 
 Core concepts and terminology:
 
@@ -76,9 +78,9 @@ Core concepts and terminology:
   namespace within /tmp name
 * Simple helper functions to *enrich* expressions defining systemd services
   with secrets
-* "side-car" service: A privileged systemd service running the fetcher
+* "Side-car" service: A privileged systemd service running the fetcher
   function to retrieve the fetcher function, and initially create the service
-  namespace.
+  namespace
 * Secrets scope: provides a context in swhich secrets are accessible as
   attributes resolving to path names within the private namespace
 
@@ -86,14 +88,13 @@ The general idea is centered around this simple process:
 
 A privileged side-car service is launched first, creates a namespace, executes
 the fetcher function which retrieves the secrets and copies them into the private
-tmpfs. The side-car service binds to the target service to ensure it's shut
-down and the namespace is destroyed when the target service disappears. This
-service uses `RemainAfterExit` to keep the namespace open for other services
-without relying on arbitrary timing.
+tmpfs. The side-car service binds to the target service to ensure that it's shut
+down and the namespace is destroyed when the target service disappears. The side-car
+uses `RemainAfterExit` to keep the namespace open for other services.
 
 The target service launches once the side-car service has been launched,
-joins it's namespace and is able to access the secrets provided in the shared
-tmpfs in `/tmp`.
+the target service then joins its namespace with the side-car namespace
+and is able to access the secrets provided in the shared tmpfs in `/tmp`.
 The service is now free to access the file in whichever way it wants -
 for instance just passing the path to the software to be launched as
 an argument, or load it up into an environment variable.
@@ -118,7 +119,7 @@ in
     };
 ```
 
-This is a minimal example of a service depending on a secret `secret1`.
+This is a minimal example of a service depending on a secret called `secret1`.
 
 More specifically, in this example a secrets scope is created - to allow for
 extensibility and differentiation a store has a type. In this case "folder"
@@ -129,31 +130,32 @@ their id. How a secrets identifier is resolved, should be up to the fetcher
 function and here it's just trivially the file-name (this of course does not
 allow for file extensions).
 
-Those secrets are then made acessible to the target service unit definitions as
-arguments passed into a lambda within the scope. Those arguments then point to
+These secrets are then made acessible to the target service's unit definitions as
+arguments passed into a lambda within the scope. These arguments then point to
 some private location within the namespace - in our case `secret1 ->
 /tmp/secret1`.
 
-The resolution and location is decided by the inner workings of
-the implementation and should be rather unimportant to the user, as it could
-potentially change, if other private locations besides `/tmp` become available.
-It is of course still possible to just point to the file locations given the
-knowledge, but is less convenient and would not result in build time errors
-when wrong paths are specified - thus the arguments add a little bit of
-convenience and safety, aside from the indirection they offer.
+The resolution and location of the secrets is decided by the implementation and
+should be of little concern to the user as it could potentially change if other
+private locations besides `/tmp` become available. It is still possible
+to point to the file locations, but is less convenient and
+would not result in build time errors when wrong paths are specified - thus the
+arguments add a little bit of convenience and safety, aside from the indirection
+they offer.
 
 For every service defined this way in a scope, a side-car container is generated
 _per service_ and wired up with the target service. This means that the ability
 to create a scope does not break isolation between multiple target services
 but can add a little bit of developer convenience.
 
-For this the target service is forced/asserted to utilize `PrivateTmp=true`.
+
 
 A working POC example can be found in https://github.com/d-goldin/nix-svc-secrets/blob/master/secrets-test.nix.
+In this example the target service is forced/asserted to utilize `PrivateTmp=true`.
 
 For the above simple case, the generated service definitions looks like the following:
 
-side-car service:
+Side-car service:
 
 ```
 [Unit]
@@ -217,14 +219,14 @@ I can't really think of a serious drawback right now, but hopefully the
 RFC process can surface some.
 
 One aspect is of course the additional number of services generated, but this
-does not seem to be a bit issue when using NixOps.
+does not seem to be a big issue when using NixOps.
 
 # Alternatives
 [alternatives]: #alternatives
 
 * One approach that has been proposed in the past is a non-world readable store,
   in issue #8 (support private files in the nix store, from 2012). While this would
-  be pretty great, it's rather complex and has not made huge progress in a while.
+  be pretty great, it's rather complex and has not made progress in a while.
 
 * "Classical" approach of just storing secrets readable only to a service user and
   utilizing string-paths to reference them. This does not work well anymore with
@@ -250,19 +252,15 @@ nixos service modules.
 [unresolved]: #unresolved-questions
 
 * Is it sufficient to put responsibility on restarting services after key changes
-  onto the user or would an automated mechanism be better? There are also down-sides
-  to an automated mechanism too.
-* Right now the POC does not support joining other namespaces if needed. Also, this has
-  some security implications, as the other process would be able to read the secrets
-  files loaded into the private tmp. But this would be also the case in other scenarios.
-  Is it sufficient to just emit a warning? Should there be a "i know what I'm doing" flag?
+  onto the user or would an automated mechanism be better?
+
 * Would it be better to create a side-cart per secret instead of per secret-scope+service?
 
 # Future work
 [future]: #future-work
 
 * When using a scope with multiple services, ideally only the secrets
-  references in the services definition should be made available to each
+  referenced in the services definition should be made available to each
   service. Right now all the secrets of the scope are blindly copied.
 * Transition of most critical services to use proposed approach
 * Implementation of more supported secret stores, such as nixops and vault
