@@ -267,4 +267,7 @@ nixos service modules.
 * Optional restarting for services affected by rolled secrets
 * Merging some attributes better than in the POC - like JoinsNamespaceOf
 * Provide simple shell functions for features like loading a file into an environment
-  variable
+  variable and possibly some wrappers to make injecting secrets into config file templates
+  easier.
+* Decouple secret id name from secret file name, for convenience and to make more complex
+  file names work.
