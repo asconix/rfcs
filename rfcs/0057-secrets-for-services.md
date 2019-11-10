@@ -59,12 +59,12 @@ To summarize, necessary preconditions:
 * It's sufficiently secure to store the secrets or access tokens in a location
   only accessible by root on the system
 * The secrets store locations is secure at rest, such as full-disk-encryption.
-* Interactive unlocking scenarios are should be treated separately
+* Interactive unlocking scenarios should be treated separately
 * Linux namespaces are sufficiently secure
 * The service can be run using `PrivateTmp`
 
 Design goals:
-* A set of secrets are made available to a set of services only for the duration of their execution
+* A set of secrets is made available to a set of services only for the duration of their execution
 * Retrieved secrets are only accessible to the service processes and root
 * Retrieved secrets are reliably cleaned up when the services stop, crash,
   receive sigkill or the system is restarted
@@ -72,7 +72,7 @@ Design goals:
 Core concepts and terminology:
 
 * *Secrets store*: a secure file-system based location, in this document
-  `/etc/secrets`, only accessible to root
+  `/etc/secrets`, only accessible by root
 * A *fetcher* function: a function whose task it is to resolve the secret
   identifier, retrieve the secret and place it in the service process' private
   namespace within /tmp name
@@ -122,13 +122,13 @@ in
 This is a minimal example of a service depending on a secret called `secret1`.
 
 More specifically, in this example a secrets scope is created - to allow for
-extensibility and differentiation a store has a type. In this case "folder"
+extensibility and differentiation a store have a type. In this case "folder"
 denotes a secrets store in the form of a root-only accessible locked down
 directory on the local filesystem. Here we want to acquire access to
 2 secrets, and 2 secrets only, which are specified in `loadSecrets`, by
 their id. How a secrets identifier is resolved, should be up to the fetcher
 function and here it's just trivially the file-name (this of course does not
-allow for file extensions).
+allow file extensions).
 
 These secrets are then made acessible to the target service's unit definitions as
 arguments passed into a lambda within the scope. These arguments then point to
@@ -137,7 +137,7 @@ some private location within the namespace - in our case `secret1 ->
 
 The resolution and location of the secrets is decided by the implementation and
 should be of little concern to the user as it could potentially change if other
-private locations besides `/tmp` become available. It is still possible
+private locations besides `/tmp` becomes available. It is still possible
 to point to the file locations, but is less convenient and
 would not result in build time errors when wrong paths are specified - thus the
 arguments add a little bit of convenience and safety, aside from the indirection
