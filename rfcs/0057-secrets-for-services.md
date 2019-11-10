@@ -122,7 +122,7 @@ in
 This is a minimal example of a service depending on a secret called `secret1`.
 
 More specifically, in this example a secrets scope is created - to allow for
-extensibility and differentiation a store have a type. In this case "folder"
+extensibility and differentiation a store has a type. In this case "folder"
 denotes a secrets store in the form of a root-only accessible locked down
 directory on the local filesystem. Here we want to acquire access to
 2 secrets, and 2 secrets only, which are specified in `loadSecrets`, by
@@ -137,7 +137,7 @@ some private location within the namespace - in our case `secret1 ->
 
 The resolution and location of the secrets is decided by the implementation and
 should be of little concern to the user as it could potentially change if other
-private locations besides `/tmp` becomes available. It is still possible
+private locations besides `/tmp` become available. It is still possible
 to point to the file locations, but is less convenient and
 would not result in build time errors when wrong paths are specified - thus the
 arguments add a little bit of convenience and safety, aside from the indirection
